@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Chat App</title>
+    <link rel="stylesheet" href="/style.css">
+    <style>
+        #chat-container { max-width: 800px; margin: 0 auto; padding: 20px; }
+        #messages { height: 400px; overflow-y: auto; border: 1px solid #ccc; padding: 10px; margin-bottom: 20px; }
+        #online-users { float: right; width: 200px; border: 1px solid #ccc; padding: 10px; }
+        .message { margin-bottom: 10px; }
+        .username { font-weight: bold; }
+        .time { color: #666; font-size: 0.8em; }
+    </style>
+</head>
+<body>
+    <div id="chat-container">
+        <div id="online-users">
+            <h3>Online Benutzer</h3>
+            <ul id="users-list"></ul>
+        </div>
+        
+        <div id="messages"></div>
+        
+        <div id="input-area" style="display: none;">
+            <input type="text" id="message-input" placeholder="Nachricht eingeben...">
+            <button onclick="sendMessage()">Senden</button>
+        </div>
+        
+        <div id="login-area">
+            <input type="text" id="nickname-input" placeholder="Nickname eingeben">
+            <button onclick="join()">Chat beitreten</button>
+        </div>
+    </div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let nickname;
+
+        function join() {
+            nickname = document.getElementById('nickname-input').value.trim();
+            if (nickname) {
+                socket.emit('join', nickname);
+                document.getElementById('login-area').style.display = 'none';
+                document.getElementById('input-area').style.display = 'block';
+            }
+        }
+
+        function sendMessage() {
+            const input = document.getElementById('message-input');
+            const message = input.value.trim();
+            if (message) {
+                socket.emit('chatMessage', message);
+                input.value = '';
+            }
+        }
+
+        socket.on('message', (data) => {
+            const messages = document.getElementById('messages');
+            messages.innerHTML += `
+                <div class="message">
+                    <span class="username">${data.user}</span>
+                    <span class="time">${data.time}</span>: 
+                    ${data.text}
+                </div>
+            `;
+            messages.scrollTop = messages.scrollHeight;
+        });
+
+        socket.on('userJoined', (data) => {
+            updateUsersList(data.onlineUsers);
+            const messages = document.getElementById('messages');
+            messages.innerHTML += `
+                <div class="message" style="color: green;">
+                    ${data.user} ist dem Chat beigetreten
+                </div>
+            `;
+        });
+
+        socket.on('userLeft', (data) => {
+            updateUsersList(data.onlineUsers);
+            const messages = document.getElementById('messages');
+            messages.innerHTML += `
+                <div class="message" style="color: red;">
+                    ${data.user} hat den Chat verlassen
+                </div>
+            `;
+        });
+    </script>
+</body>
+</html> 
